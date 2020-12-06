@@ -1,0 +1,108 @@
+/*
+ 需要先对git进行全局设置
+ 需要git命令行支持
+ 通过git提交的次数和tag当作versionCode和VersionName
+ */
+
+/**
+ * 获取当前分支的提交次数
+ * @return
+ * @throws IOException
+ * @throws NumberFormatException //项目未加入git会报错，但不影响编译
+ */
+static def getGitCommitCount() throws IOException, NumberFormatException {
+    /*return */ 'git rev-list HEAD --count'.execute().text.toInteger()
+}
+
+/**
+ * 获取当前git的tag的个数
+ * @return
+ * @throws IOException
+ * @throws NumberFormatException
+ */
+static def getGitTagCount() throws IOException, NumberFormatException {
+    'git tag --list'.execute().text.trim().size()
+}
+
+/**
+ * 获取离当前提交最近的tag描述
+ * 将返回tag的内容
+ * git tag命令：git tag -a "[tag_name]" -m "[tag_message]"
+ * @return
+ */
+static def getGitTagName() throws IOException {
+    'git describe --tags'.execute().text.trim()
+}
+
+/**
+ * 将git提交的tag次数转换为versionCode
+ * 如果出错，将默认1.0
+ * @return
+ */
+static def getGitVersionCode4Debug() {
+    def versionCode = 0
+    try {
+        versionCode = getGitCommitCount()
+        versionCode += 1000
+    } catch (IOException e) {
+        e.printStackTrace()
+    } catch (NumberFormatException e) {
+        e.printStackTrace()
+    }
+    if (versionCode == 0) {
+        versionCode = 1000
+    }
+    return versionCode
+}
+
+
+/**
+ * 将tag数量当做versionCode
+ */
+static def getGitVersionCode() {
+    def versionCode = 0
+    try {
+        versionCode = getGitTagCount()
+    } catch (IOException e) {
+        e.printStackTrace()
+    } catch (NumberFormatException e) {
+        e.printStackTrace()
+    }
+    if (versionCode == 0) {
+        versionCode = 1
+    }
+    return versionCode
+}
+
+/**
+ * 拼凑versionName
+ * 结果如"v0.1.1.33" => v0.1.1为tag，33为此tag的提交次数
+ * @return
+ */
+static def getGitVersionName() {
+    def versionName = null
+    try {
+        versionName = getGitTagName()
+        def matcher = versionName =~ "-(\\d+)-g" //进行局部匹配，返回java.util.regex.Matcher对象
+        if (matcher) { //调用的是matcher.find()方法
+            versionName = versionName.substring(0, matcher.start()) + "." + matcher[0][1]
+        }
+    } catch (IOException e) {
+        e.printStackTrace()
+    } catch (StringIndexOutOfBoundsException e) {
+        e.printStackTrace()
+    }
+
+    if (versionName == null || versionName.length() == 0) {
+        versionName = "1.0"
+    }
+    return versionName
+}
+
+ext {
+    gitVersion = [
+            versionCode4Debug: getGitVersionCode4Debug(),
+            versionCode      : getGitVersionCode(),
+            versionName      : getGitVersionName()
+    ]
+}

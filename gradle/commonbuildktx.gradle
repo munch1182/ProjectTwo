@@ -1,0 +1,10 @@
+apply plugin: 'kotlin-android'
+apply plugin: 'kotlin-parcelize'
+
+apply from: '../gradle/commonbuild.gradle'
+
+dependencies {
+
+    implementation rootProject.ext.dependencies['kotlin']
+    implementation rootProject.ext.dependencies['core_ktx']
+}
