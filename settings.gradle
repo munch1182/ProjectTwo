@@ -1,2 +1,9 @@
+include ':autocallplugin'
+include ':autocallmanager'
+include ':autocallapt'
+include ':autocallaptonemodule'
+include ':autocallannotation'
+include ':autocallannotationonemodule'
+include ':libtest'
 include ':app'
 rootProject.name = "P2"

@@ -5,11 +5,13 @@ buildscript {
     repositories {
         google()
         jcenter()
+        //插件只是用于buildscript范围
+        maven { url './repository' }
     }
     dependencies {
         classpath "com.android.tools.build:gradle:4.1.1"
         classpath rootProject.ext.dependencies['kotlin_gradle']
-
+        classpath "com.munch.plugin:autocall:1.0.0-a22"
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
     }

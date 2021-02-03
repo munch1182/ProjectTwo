@@ -1,0 +1,28 @@
+plugins {
+    id 'java-library'
+    id 'groovy'
+    id 'maven'
+    id 'kotlin'
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_1_7
+    targetCompatibility = JavaVersion.VERSION_1_7
+}
+
+dependencies {
+    implementation gradleApi()
+    implementation localGroovy()
+    //版本参考project的build.gradle
+    implementation 'com.android.tools.build:gradle:4.1.1'
+}
+
+//通过maven将插件发布到本地的脚本配置
+uploadArchives {
+    repositories.mavenDeployer {
+        pom.version = '1.0.0-a22'
+        pom.artifactId = 'autocall'
+        pom.groupId = 'com.munch.plugin'
+        repository(url: uri("../repository/"))
+    }
+}

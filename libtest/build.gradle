@@ -1,15 +1,11 @@
-apply plugin: 'com.android.application'
+apply plugin: 'com.android.library'
 apply from: '../gradle/commonbuildktx.gradle'
 apply plugin: 'kotlin-kapt'
-apply plugin: 'munch.autocall'
 
 dependencies {
-    implementation rootProject.ext.dependencies['constraintlayout']
-    implementation rootProject.ext.dependencies['material']
-
     /*implementation project(':autocallannotation')
     kapt project(':autocallapt')*/
-    implementation project(':libtest')
+
     implementation project(':autocallannotation')
     kapt project(':autocallapt')
 }
