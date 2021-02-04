@@ -2,7 +2,6 @@ plugins {
     id 'java-library'
     id 'groovy'
     id 'maven'
-    id 'kotlin'
 }
 
 java {
@@ -17,12 +16,39 @@ dependencies {
     implementation 'com.android.tools.build:gradle:4.1.1'
 }
 
+def version = '1.0.0'
+
 //通过maven将插件发布到本地的脚本配置
-uploadArchives {
+//自动升级版本，见versionFile
+//versionFile不是gradle文件主要是避免sync
+//测试时调用可以直接使用+代替版本号
+uploadArchives() {
+    def versionFile = new File('./autocallplugin/version')
+    versionFile.eachLine { line ->
+        version = line
+    }
+    def split = version.split('-a')
+    if (split.size() == 2) {
+        //提升一个版本
+        def nextVersion = split[0] + "-a" + (split[1].toInteger() + 1).toString()
+        version = nextVersion
+        versionFile.withOutputStream { osm ->
+            osm.write(nextVersion.getBytes())
+        }
+    }
     repositories.mavenDeployer {
-        pom.version = '1.0.0-a22'
+        pom.version = version
         pom.artifactId = 'autocall'
         pom.groupId = 'com.munch.plugin'
         repository(url: uri("../repository/"))
     }
+}
+
+//打包完上传后删除本地jar文件避免类存在错误
+tasks.findByName('uploadArchives').doLast {
+    delete new File('./build')
+}
+
+task claer {
+    delete new File('./build')
 }

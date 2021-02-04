@@ -65,12 +65,6 @@ open class AutoCallProcessor : AbstractProcessor() {
 
             val methodBuilder = MethodSpec.methodBuilder(AutoCallManager.proxyFunName())
                 .addModifiers(Modifier.PUBLIC, Modifier.STATIC, Modifier.FINAL)
-                .addParameter(
-                    ParameterSpec.builder(
-                        String::class.java,
-                        AutoCallManager.proxyFunParameterName()
-                    ).build()
-                )
             //开始方法体
             mutableList.forEach {
                 methodBuilder.addStatement("${it.clazz}.${it.element.simpleName}()")
