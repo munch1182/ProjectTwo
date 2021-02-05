@@ -11,19 +11,19 @@ object TestInLibrary {
     @AutoCall(target = "lib")
     @JvmStatic
     fun test() {
-        Log.d("test","lib123")
+        Log.d("test", "TestInLibrary test target = lib")
     }
 
-    @AutoCall(target = "lib",priority = 2)
+    @AutoCall(target = "lib", priority = 2)
     @JvmStatic
     fun test2() {
-        Log.d("test","lib123456")
+        Log.d("test", "TestInLibrary test2 target = lib priority = 2")
     }
 
-    @AutoCall(target = "libs",priority = 2)
+    @AutoCall(target = "libs", priority = 2)
     @JvmStatic
     fun test3() {
-        Log.d("test","lib123456")
+        Log.d("test", "TestInLibrary test3 target = libs")
     }
 }
 

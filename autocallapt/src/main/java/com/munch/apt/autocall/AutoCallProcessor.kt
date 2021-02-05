@@ -4,7 +4,6 @@ import com.munch.annotation.autocall.AutoCall
 import com.munch.manager.autocall.AutoCallManager
 import com.squareup.javapoet.JavaFile
 import com.squareup.javapoet.MethodSpec
-import com.squareup.javapoet.ParameterSpec
 import com.squareup.javapoet.TypeSpec
 import javax.annotation.processing.AbstractProcessor
 import javax.annotation.processing.FilerException

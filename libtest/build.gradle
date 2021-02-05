@@ -2,10 +2,22 @@ apply plugin: 'com.android.library'
 apply from: '../gradle/commonbuildktx.gradle'
 apply plugin: 'kotlin-kapt'
 
+android {
+
+    sourceSets {
+        main {
+            java {
+                srcDirs = ['src/main/java']
+                exclude 'apt/**'
+            }
+        }
+    }
+}
+
 dependencies {
     /*implementation project(':autocallannotation')
     kapt project(':autocallapt')*/
 
     implementation project(':autocallannotation')
-    kapt project(':autocallapt')
+    kapt project(':autocallaptonemodule')
 }

@@ -1,15 +1,25 @@
 apply plugin: 'com.android.application'
 apply from: '../gradle/commonbuildktx.gradle'
 apply plugin: 'kotlin-kapt'
-apply plugin: 'munch.autocall'
+/*apply plugin: 'munch.autocall'*/
+
+android {
+
+    sourceSets {
+        main {
+            java {
+                //跨模块引用文件来生成注解，一个取巧的跨模块方案
+                srcDirs = ['src/main/java', '../libtest/src/main/apt']
+            }
+        }
+    }
+}
 
 dependencies {
     implementation rootProject.ext.dependencies['constraintlayout']
     implementation rootProject.ext.dependencies['material']
 
-    /*implementation project(':autocallannotation')
-    kapt project(':autocallapt')*/
     implementation project(':libtest')
     implementation project(':autocallannotation')
-    kapt project(':autocallapt')
+    kapt project(':autocallaptonemodule')
 }
