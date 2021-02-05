@@ -1,7 +1,6 @@
 apply plugin: 'com.android.application'
 apply from: '../gradle/commonbuildktx.gradle'
 apply plugin: 'kotlin-kapt'
-/*apply plugin: 'munch.autocall'*/
 
 android {
 
@@ -9,6 +8,10 @@ android {
         main {
             java {
                 //跨模块引用文件来生成注解，一个取巧的跨模块方案
+                //组件化下可以通过开关自由控制是否引入apt文件夹
+                //但缺陷在于as有些时候(gradle sync之后)无法正常识别libtest的java文件夹为源代码文件夹，即使在build.gradle中进行了设置
+                //虽然正常组件化情况下app模块不应该直接引用组件libtest
+                //此时需要手动右键Mark dir as Sources root
                 srcDirs = ['src/main/java', '../libtest/src/main/apt']
             }
         }
@@ -18,8 +21,9 @@ android {
 dependencies {
     implementation rootProject.ext.dependencies['constraintlayout']
     implementation rootProject.ext.dependencies['material']
-
+    //libtest组件化下可以看作一个组件，只是没有写相应开关
     implementation project(':libtest')
+
     implementation project(':autocallannotation')
-    kapt project(':autocallaptonemodule')
+    kapt project(':autocallapt')
 }

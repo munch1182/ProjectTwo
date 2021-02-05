@@ -1,20 +1,30 @@
 package com.munch.apt.autocall.onemodule
 
 import com.munch.annotation.autocall.AutoCall
-import com.munch.apt.autocall.AnnotationElement
-import com.munch.apt.autocall.AutoCallProcessor
 import com.munch.manager.autocall.AutoCallManager
-import com.squareup.javapoet.JavaFile
-import com.squareup.javapoet.MethodSpec
-import com.squareup.javapoet.ParameterSpec
-import com.squareup.javapoet.TypeSpec
+import com.squareup.javapoet.*
+import org.jetbrains.annotations.NotNull
+import org.jetbrains.annotations.Nullable
+import javax.annotation.processing.AbstractProcessor
 import javax.annotation.processing.FilerException
 import javax.annotation.processing.RoundEnvironment
+import javax.lang.model.SourceVersion
 import javax.lang.model.element.ExecutableElement
 import javax.lang.model.element.Modifier
 import javax.lang.model.element.TypeElement
 
-class AutoCallOneModuleProcessor : AutoCallProcessor() {
+class AutoCallOneModuleProcessor : AbstractProcessor() {
+
+    private val hash: HashMap<String, MutableList<AnnotationElement>> = hashMapOf()
+
+    override fun getSupportedAnnotationTypes(): MutableSet<String> {
+        return mutableSetOf(AutoCall::class.java.canonicalName)
+    }
+
+    override fun getSupportedSourceVersion(): SourceVersion {
+        return SourceVersion.latestSupported()
+    }
+
 
     /**
      * 根据找到的注解归总调用并生成文件
@@ -44,7 +54,6 @@ class AutoCallOneModuleProcessor : AutoCallProcessor() {
                 if (it.enclosingElement !is TypeElement) {
                     return@forEach
                 }
-
                 //获取类名
                 val clazz = (it.enclosingElement as TypeElement).qualifiedName.toString()
                 //根据target分类
@@ -54,17 +63,27 @@ class AutoCallOneModuleProcessor : AutoCallProcessor() {
                     hash[autoCall.target] = mutableListOf(AnnotationElement(clazz, autoCall, it))
                 }
             }
-        //创建Caller类并实现call方法
+        //创建Caller类并实现两个call方法
         val callMethodBuilder = MethodSpec.methodBuilder(AutoCallManager.callFunName())
             .addModifiers(Modifier.PUBLIC, Modifier.STATIC, Modifier.FINAL)
+            .addParameter(parameterTarget())
+            .addParameter(parameterAny())
+            .addJavadoc("Auto generate by AutoCall annotation")
+        callMethodBuilder.beginControlFlow(
+            "switch(\$L)",
+            AutoCallManager.callFunParameterTargetName()
+        )
+
+        val callMethod2Builder = MethodSpec.methodBuilder(AutoCallManager.callFunName())
+            .addModifiers(Modifier.PUBLIC, Modifier.STATIC, Modifier.FINAL)
             .addParameter(
-                ParameterSpec.builder(
-                    String::class.java,
-                    AutoCallManager.callFunParameterName()
-                ).build()
+                parameterTarget()
             )
             .addJavadoc("Auto generate by AutoCall annotation")
-        callMethodBuilder.beginControlFlow("switch(\$L)", AutoCallManager.callFunParameterName())
+        callMethod2Builder.beginControlFlow(
+            "switch(\$L)",
+            AutoCallManager.callFunParameterTargetName()
+        )
 
         hash.forEach { (s, mutableList) ->
             mutableList.sortDescending()
@@ -72,9 +91,27 @@ class AutoCallOneModuleProcessor : AutoCallProcessor() {
 
             val proxyMethodBuilder = MethodSpec.methodBuilder(AutoCallManager.proxyFunName())
                 .addModifiers(Modifier.PUBLIC, Modifier.STATIC, Modifier.FINAL)
+                .addParameter(
+                    parameterAny()
+                )
             //开始方法体
             mutableList.forEach {
-                proxyMethodBuilder.addStatement("\$L.\$L()", it.clazz, it.element.simpleName)
+                val parameters = it.element.parameters
+                if (parameters.size > 0) {
+                    proxyMethodBuilder.addStatement(
+                        "\$L.\$L((\$L)\$L)",
+                        it.clazz,
+                        it.element.simpleName,
+                        parameters[0].asType(),
+                        AutoCallManager.callFunParameterAnyName()
+                    )
+                } else {
+                    proxyMethodBuilder.addStatement(
+                        "\$L.\$L()",
+                        it.clazz,
+                        it.element.simpleName
+                    )
+                }
             }
 
             val proxyClazz = TypeSpec.classBuilder(AutoCallManager.newClassName(s))
@@ -92,17 +129,28 @@ class AutoCallOneModuleProcessor : AutoCallProcessor() {
             //call调用每个代理类
             callMethodBuilder.addCode("case \$S:\n", s)
             callMethodBuilder.addStatement(
-                "\t\$L.\$L()",
+                "\t\$L.\$L(\$L)",
+                proxyClazz.name,
+                AutoCallManager.proxyFunName(),
+                AutoCallManager.callFunParameterAnyName()
+            )
+            callMethodBuilder.addStatement("\tbreak")
+            //call2调用每个代理类
+            callMethod2Builder.addCode("case \$S:\n", s)
+            callMethod2Builder.addStatement(
+                "\t\$L.\$L(null)",
                 proxyClazz.name,
                 AutoCallManager.proxyFunName()
             )
-            callMethodBuilder.addStatement("\tbreak")
+            callMethod2Builder.addStatement("\tbreak")
         }
         callMethodBuilder.endControlFlow()
+        callMethod2Builder.endControlFlow()
 
         val caller = TypeSpec.classBuilder(AutoCallManager.callClassName())
             .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
             .addMethod(callMethodBuilder.build())
+            .addMethod(callMethod2Builder.build())
             .build()
 
         val file = JavaFile.builder(AutoCallManager.generatePackageName(), caller).build()
@@ -116,4 +164,23 @@ class AutoCallOneModuleProcessor : AutoCallProcessor() {
         return true
     }
 
+    private fun parameterTarget() = ParameterSpec.builder(
+        String::class.java,
+        AutoCallManager.callFunParameterTargetName()
+    ).addAnnotation(NotNull::class.java).build()
+
+    private fun parameterAny() = ParameterSpec.builder(
+        Any::class.java,
+        AutoCallManager.callFunParameterAnyName()
+    ).addAnnotation(Nullable::class.java).build()
+
+    data class AnnotationElement(
+        val clazz: String,
+        val annotation: AutoCall,
+        val element: ExecutableElement
+    ) : Comparable<AnnotationElement> {
+        override fun compareTo(other: AnnotationElement): Int {
+            return annotation.priority.compareTo(other.annotation.priority)
+        }
+    }
 }

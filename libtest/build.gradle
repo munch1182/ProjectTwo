@@ -8,16 +8,13 @@ android {
         main {
             java {
                 srcDirs = ['src/main/java']
-                exclude 'apt/**'
+                exclude 'src/main/apt/**'
             }
         }
     }
 }
 
 dependencies {
-    /*implementation project(':autocallannotation')
-    kapt project(':autocallapt')*/
-
     implementation project(':autocallannotation')
-    kapt project(':autocallaptonemodule')
+    kapt project(':autocallapt')
 }

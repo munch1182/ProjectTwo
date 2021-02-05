@@ -6,13 +6,15 @@ object AutoCallManager {
 
     fun newClassName(target: String) = "$PREFIX$target$SUFFIX"
 
-    fun proxyFunName() = "proxyFunction"
-    fun proxyFunParameterName() = "target"
+    fun proxyFunName() = "proxy"
+    fun proxyFunParameterTargetName() = "target"
+    fun proxyFunParameterAnyName() = "any"
     fun generatePackageName() = "com.munch.autocall.generate"
 
     fun callClassName() = "Caller"
     fun callFunName() = "call"
-    fun callFunParameterName() = proxyFunParameterName()
+    fun callFunParameterTargetName() = proxyFunParameterTargetName()
+    fun callFunParameterAnyName() = proxyFunParameterAnyName()
 
     fun isProxyFile(name: String): Boolean {
         return name.startsWith(PREFIX) && name.endsWith(SUFFIX)
