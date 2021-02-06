@@ -20,6 +20,7 @@
   - [使用](#使用-1)
   - [调试](#调试)
   - [实现](#实现-1)
+  - [transform](#transform-1)
 
 <!-- /code_chunk_output -->
 
@@ -37,7 +38,7 @@
 - a. 创建一个`java`的`Library`
 - b. 在`java`文件夹创建`javax.annotation.processing.AbstractProcessor`的实现类
 - c. 创建`resources/META-INF/services`文件夹并在其下添加`javax.annotation.processing.Processor`文件，并在文件中添加实现类的全路径
-    
+
 ### 3. 使用
 
 - 项目依赖(`implementation`或`api`)自定义注解，使用编译时注解(`kapt`)引入注解器依赖
@@ -77,7 +78,7 @@
 ## plugin
 
 - `plugin`指`gradle`的插件
-- `gradle`的`plugin`使用`groovy`开发的，兼容`java`语言，不支持直接调用`kotlin`。建议直接使用`groovy`，`groovy`对于`java`来说除了不能自动导入类不会报编译器异常之外基本不会有开发障碍
+- `gradle`的`plugin`使用`groovy`开发的，兼容`java`语言，不支持直接调用`kotlin`。建议直接使用`groovy`，`groovy`对于`java`来说除了有时候不能自动导入类不会报编译器异常之外基本不会有开发障碍，`groovy`文件以`.groovy`为后缀
 
 ### 实现
 
@@ -89,7 +90,7 @@
         implementation localGroovy()
     }
     ```
-- 3. 实现`org.gradle.api.Plugin`
+- 3. 创建`groovy`实现`org.gradle.api.Plugin`
 - 4. 在`resources/META-INF/gradle-plugins`文件内建立`pluginname.properties`并在其中添加`implementation-class=实现plugin的全路径类名`，`pluginname`需要自定义，其也是使用时的插件名
 
 ### 使用
@@ -117,16 +118,16 @@
 - 3. 发布：执行uploadArchives即可
     - 可以使用androidstuido中`uploadArchives`左侧的快捷图标，也可以使用`gradle`窗口中的对应模块`upload`分组下的`uploadArchives`，也可以使用命令行执行
 - 4. 使用
-    - 引入: 在`repositories`中添加本地仓库位置`maven { url './repository' }`，在`dependencies`中添加`classpath "groupId:artifactId:version"`
+    - 引入: 在`repositories`中添加本地仓库位置，在`dependencies`中添加`classpath`依赖
         ```java
         buildscript {
             repositories {
-                maven { url './repository' }
+                maven { url './repository' }//对应本地仓库位置
                 ...
             }
             dependencies {
                 ...
-                classpath "groupId:artifactId:version"
+                classpath "groupId:artifactId:version"//对应设置
             }
         }
         ```
@@ -137,7 +138,7 @@
 
 ## Transform
 
-- `transform`是class文件转dex文件前修改class文件的api，可以配合`gradle`的`plugin`使用
+- `transform`是`class`文件转`dex`文件前修改`class`文件的`api`，可以配合`gradle`的`plugin`和字节码修改框架使用
 
 ### 引入
 
@@ -145,7 +146,7 @@
 
 ### 使用
 
-- 1. 实现`com.android.build.api.transform.Transform`
+- 1. 创建`groovy`文件类实现`com.android.build.api.transform.Transform`
 - 2. 在`org.gradle.api.Plugin`的实现类的`apply`方法中注册
     ```groovy
     import com.android.build.gradle.AppExtension
@@ -156,6 +157,7 @@
     class MyPlugin implements Plugin<Project> {
         @Override
         void apply(Project project) {
+            //注册为AppExtension，因此不能在library中使用
             def android = project.extensions.getByType(AppExtension)
             android.registerTransform(new MyTransform())//MyTransform即实现类
         }
@@ -174,6 +176,60 @@
     - `getScopes`，可以返回`com.android.build.gradle.internal.pipeline.TransformManager`下以`SCOPE_`开头的常量，指扫描的范围，包括当前module、其它jar包等
     - `isIncremental`，是否启用增量扫描
     - `transform`扫描的回调方法，主要的处理方法
+
+### transform
+
+- `transform`的参数`TransformInvocation`可以使用`getInputs`来获取所有被扫到的文件夹和文件，具体分为两个类型，一个是`class`文件，在`DirectoryInput`下可以获取各个文件，可以理解为主模块下的源码编译文件，一个是`jar`文件，即`JarInput`类型，可以理解为各个依赖模块的`jar`包
+- `transform`的逻辑是，通过`transform`获取输入，同时要负责将文件输出到指定目录，下一个`transform`会将输出当作输入继续操作
+    ```groovy
+    //groovy文件
+    import org.apache.commons.io.FileUtils //无需额外添加依赖
+    import org.apache.commons.codec.digest.DigestUtils //无需额外添加依赖
+    import com.android.build.api.transform.Format
+    import com.android.build.api.transform.TransformInput
+    import com.android.build.api.transform.JarInput
+    import com.android.build.api.transform.TransformInvocation
+
+    @Override
+    void transform(TransformInvocation trans){
+        trans.input.each{ TransformInput input ->
+            //1. 遍历class文件
+            input.directoryInputs.each { DirectoryInput di ->
+                //获取class文件
+                //file可能是目录也可能是文件，一般来说是目录，因为源码都在包下
+                def file = di.file
+                if (file.isDirectory()){
+                    file.eachFileRecurse{ File f ->
+                        //f即每个文件
+                        //对file进行修改
+                        ...
+                    }
+                //一般来说不会是文件
+                } else {
+                    //对file进行修改
+                    ...
+                }
+                //获取输入位置
+                def outDir = trans.outputProvider.getContentLocation(di.name, di.contentTypes,
+                di.scopes, Format.DIRECTORY)
+                //将修改后的文件输入到指定位置
+                FileUtils.copyDirectory(file, out)
+            }
+            //2. 遍历jar文件
+            input.jarInputs.each{ JarInput jarInput ->
+                //获取jar文件
+                def src = jarInput.file
+                //对src进行修改
+                ...
+                //避免重复名称而被覆盖
+                def jarName = src.name.replace(".jar","") += DigestUtils.md5Hex(src.getAbsolutePath())
+                def outFile = trans.outputProvider.getContentLocation(jarName, jarInput.contentTypes,
+                jarInput.scopes, Format.JAR)
+                FileUtils.copyFile(src, outFile)
+            }
+        }
+    }
+    ```
 
 
 
