@@ -28,7 +28,7 @@ open class AutoCallProcessor : AbstractProcessor() {
     /**
      * 根据找到的注解归总调用并生成文件
      *
-     * 生成的文件在build/generated/source/kapt/debug/文件路径(kapt时kotlin路径)
+     * 生成的文件在build/generated/source/kapt/debug/文件路径(kapt是kotlin路径)
      *
      *
      */

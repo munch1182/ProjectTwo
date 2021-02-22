@@ -1,3 +1,5 @@
+@file:Suppress("MemberVisibilityCanBePrivate")
+
 package com.munch.manager.autocall
 
 object AutoCallManager {
